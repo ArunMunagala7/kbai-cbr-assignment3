@@ -55,6 +55,47 @@ This will:
 
 ---
 
+## Workflow (What Happens End-to-End)
+
+1. **Load data** (`data_loader.py`)
+	- Reads `car.data` and `ENB2012_data.xlsx`
+	- Builds `Case` objects
+	- Normalizes energy features (z-score)
+	- Splits into train/test (80/20)
+
+2. **Initialize systems** (`car_cbr.py`, `energy_cbr.py`)
+	- Sets feature types (categorical vs numerical)
+	- Sets baseline and tuned weights
+	- Builds the initial case base (training set)
+
+3. **Run six conditions** (`main.py`)
+	- **Cars**: baseline, tuned, tuned+adaptation
+	- **Energy**: baseline (learn), tuned+adapt (learn), tuned+adapt (no learn)
+
+4. **Retrieve + Adapt** (`cbr_system.py`, domain files)
+	- **Retrieve**: find most similar case(s)
+	- **Adapt**: apply rules in `car_cbr.py` or `energy_cbr.py`
+	- **Retain**: add new case when learning is enabled
+
+5. **Evaluate** (`evaluation.py`)
+	- Accuracy for classification
+	- MAE/RMSE for regression
+
+---
+
+## Code Flow (How the Modules Interact)
+
+```
+main.py
+  ├─ load_car_system_data() / load_energy_system_data()  [data_loader.py]
+  ├─ CarCBRSystem / EnergyCBRSystem                      [car_cbr.py / energy_cbr.py]
+  ├─ retrieve_most_similar()                             [cbr_system.py]
+  ├─ adapt_classification() / adapt_regression()         [car_cbr.py / energy_cbr.py]
+  └─ calculate_accuracy/mae/rmse                         [evaluation.py]
+```
+
+---
+
 ## How to Test Components (Optional)
 
 You can run each module directly to sanity-check behavior:

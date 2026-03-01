@@ -237,44 +237,60 @@ class CBRSystem:
         
         return similarities[:k]
     
-    def run_query(self, query: Case, tuned: bool = False, 
+    def run_query(self, cb: List['Case'], query: Case, tuned: bool = False,
                  adapt_fn: Optional[Callable] = None,
-                 learning: bool = True) -> Tuple[Any, Case]:
+                 learning: bool = True) -> List:
         """
         Run the CBR cycle for a query.
-        
+
+        As specified by the assignment, run_query takes two arguments:
+          - cb: the case base (a list of Case objects)
+          - query: the query case the CBR system will evaluate
+
+        It returns a list: [solution, updated_case_base]
+
         Main CBR cycle:
-        1. Retrieve: Find most similar case
-        2. Adapt: Modify solution if adaptation function provided
-        3. Solve: Return solution
-        4. Retain: Add new case to base if learning enabled
-        
+        1. Retrieve: Find the most similar case in cb
+        2. Adapt: Modify solution if an adaptation function is provided
+        3. Solve: Return the solution
+        4. Retain: Append the new case to cb when learning is enabled
+
         Args:
+            cb: Current case base (list of Case objects)
             query: Query case (without solution)
             tuned: Whether to use tuned similarity (weighted) or baseline (equal)
             adapt_fn: Optional adaptation function(retrieved_case, query) -> solution
-            learning: Whether to add new case to case base
-            
+            learning: Whether to add the new case to the case base
+
         Returns:
-            Tuple of (solution, new_case_with_solution)
+            [solution, updated_case_base]  — list with solution and (possibly grown) cb
         """
+        # Temporarily set case base to the provided cb for retrieval
+        original_case_base = self.case_base
+        self.case_base = cb
+
         # 1. RETRIEVE: Find most similar case
         retrieved_case, similarity = self.retrieve_most_similar(query, use_weights=tuned)
-        
+
         # 2. ADAPT & 3. SOLVE: Get solution (with or without adaptation)
         if adapt_fn:
             solution = adapt_fn(retrieved_case, query, self)
         else:
             solution = retrieved_case.solution
-        
+
         # Create new case with solution
         new_case = Case(features=query.features, solution=solution)
-        
+
         # 4. RETAIN: Add to case base if learning enabled
         if learning:
-            self.add_case(new_case)
-        
-        return solution, new_case
+            cb = cb + [new_case]      # Return a new list (non-destructive)
+            self.add_case(new_case)   # Also update internal state
+
+        # Restore internal case base
+        if not learning:
+            self.case_base = original_case_base
+
+        return [solution, cb]
 
 
 if __name__ == '__main__':
@@ -303,6 +319,7 @@ if __name__ == '__main__':
     print(f"Retrieved class: {retrieved.solution}")
     print(f"Similarity: {sim:.4f}")
     
-    # Test run_query
-    solution, new_case = system.run_query(query, tuned=False, learning=False)
-    print(f"Predicted solution: {solution}")
+    # Test run_query (new signature: takes cb + query, returns [solution, updated_cb])
+    result = system.run_query(system.case_base, query, tuned=False, learning=False)
+    print(f"Predicted solution: {result[0]}")
+    print(f"Case base size after query (no learning): {len(result[1])}")

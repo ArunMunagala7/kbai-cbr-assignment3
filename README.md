@@ -41,10 +41,19 @@ python3 -m pip install -r requirements.txt
 
 ## How to Run
 
-Run the full evaluation (all 6 conditions):
-
+**Step 1** – Activate the virtual environment (first time or new terminal):
 ```bash
-python3 main.py
+source .venv/bin/activate
+```
+
+**Step 2** – Install dependencies (only needed once):
+```bash
+pip install -r requirements.txt
+```
+
+**Step 3** – Run the full evaluation (all 6 conditions):
+```bash
+python main.py
 ```
 
 This will:
@@ -138,11 +147,13 @@ Metrics: **MAE** and **RMSE**
 
 ## Team Contribution
 
-(Replace this section with your group’s division of labor)
+This project was completed individually by **Arun Munagala**.
 
-- Member 1: Implementation + experiments
-- Member 2: Report writing + analysis
-- Member 3: Adaptation strategy + testing
+- Designed and implemented the full CBR system (data loading, similarity, retrieval, adaptation, evaluation)
+- Ran all 6 test conditions and analyzed results
+- Wrote this README and the accompanying PDF report
+
+I agree that all effort on this assignment was performed by me alone.
 
 ---
 

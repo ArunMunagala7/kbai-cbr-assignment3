@@ -41,11 +41,12 @@ def run_car_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[str, 
     system1 = CarCBRSystem()
     system1.set_case_base(train_cases)
     system1.set_baseline_mode()
-    
+
     predictions1 = []
+    cb1 = system1.case_base.copy()   # start with a copy — run_query will manage updates
     for i, test_case in enumerate(test_cases):
-        solution, _ = system1.run_query(test_case, tuned=False, adapt_fn=None, learning=False)
-        predictions1.append(solution)
+        result = system1.run_query(cb1, test_case, tuned=False, adapt_fn=None, learning=False)
+        predictions1.append(result[0])
         if (i + 1) % 50 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
@@ -66,9 +67,10 @@ def run_car_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[str, 
     system2.set_tuned_mode()
     
     predictions2 = []
+    cb2 = system2.case_base.copy()
     for i, test_case in enumerate(test_cases):
-        solution, _ = system2.run_query(test_case, tuned=True, adapt_fn=None, learning=False)
-        predictions2.append(solution)
+        result = system2.run_query(cb2, test_case, tuned=True, adapt_fn=None, learning=False)
+        predictions2.append(result[0])
         if (i + 1) % 50 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
@@ -88,14 +90,16 @@ def run_car_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[str, 
     system3 = CarCBRSystem()
     system3.set_case_base(train_cases)
     system3.set_tuned_mode()
-    
+
+    def car_adapt_fn(retrieved, query, system):
+        """Adaptation wrapper compatible with run_query adapt_fn interface."""
+        return system3.adapt_classification(retrieved, query, use_voting=True)
+
     predictions3 = []
+    cb3 = system3.case_base.copy()
     for i, test_case in enumerate(test_cases):
-        retrieved, _ = system3.retrieve_most_similar(test_case, use_weights=True)
-        solution = system3.adapt_classification(retrieved, test_case, use_voting=True)
-        new_case = Case(features=test_case.features, solution=solution)
-        # Don't add to case base for this test
-        predictions3.append(solution)
+        result = system3.run_query(cb3, test_case, tuned=True, adapt_fn=car_adapt_fn, learning=False)
+        predictions3.append(result[0])
         if (i + 1) % 50 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
@@ -142,18 +146,18 @@ def run_energy_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[st
     
     predictions1 = []
     case_base_size_before = len(system1.case_base)
-    
+    cb1 = system1.case_base.copy()
+
     for i, test_case in enumerate(test_cases):
-        retrieved, _ = system1.retrieve_most_similar(test_case, use_weights=False)
-        solution = retrieved.solution  # No adaptation
-        # Add to case base (learning enabled)
-        new_case = Case(features=test_case.features, solution=solution)
-        system1.add_case(new_case)
+        # run_query: no adaptation, learning ON — cb1 grows each iteration
+        result = system1.run_query(cb1, test_case, tuned=False, adapt_fn=None, learning=True)
+        solution = result[0]
+        cb1 = result[1]          # updated case base (one case longer)
         predictions1.append(solution)
         if (i + 1) % 30 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
-    case_base_size_after_1 = len(system1.case_base)
+    case_base_size_after_1 = len(cb1)
     mae1 = Evaluator.calculate_mae(predictions1, [case.solution for case in test_cases])
     rmse1 = Evaluator.calculate_rmse(predictions1, [case.solution for case in test_cases])
     
@@ -175,21 +179,24 @@ def run_energy_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[st
     system2 = EnergyCBRSystem()
     system2.set_case_base(train_cases)
     system2.set_tuned_mode()
-    
+
+    def energy_adapt_fn(retrieved, query, system):
+        """Adaptation wrapper compatible with run_query adapt_fn interface."""
+        return system2.adapt_regression(retrieved, query, use_multiple_rules=True)
+
     predictions2 = []
     case_base_size_before = len(system2.case_base)
-    
+    cb2 = system2.case_base.copy()
+
     for i, test_case in enumerate(test_cases):
-        retrieved, _ = system2.retrieve_most_similar(test_case, use_weights=True)
-        solution = system2.adapt_regression(retrieved, test_case, use_multiple_rules=True)
-        # Add to case base (learning enabled)
-        new_case = Case(features=test_case.features, solution=solution)
-        system2.add_case(new_case)
+        result = system2.run_query(cb2, test_case, tuned=True, adapt_fn=energy_adapt_fn, learning=True)
+        solution = result[0]
+        cb2 = result[1]
         predictions2.append(solution)
         if (i + 1) % 30 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
-    case_base_size_after_2 = len(system2.case_base)
+    case_base_size_after_2 = len(cb2)
     mae2 = Evaluator.calculate_mae(predictions2, [case.solution for case in test_cases])
     rmse2 = Evaluator.calculate_rmse(predictions2, [case.solution for case in test_cases])
     
@@ -212,21 +219,22 @@ def run_energy_tests(train_cases: List[Case], test_cases: List[Case]) -> Dict[st
     system3 = EnergyCBRSystem()
     system3.set_case_base(train_cases)
     system3.set_tuned_mode()
-    
+
+    def energy_adapt_fn3(retrieved, query, system):
+        return system3.adapt_regression(retrieved, query, use_multiple_rules=True)
+
     predictions3 = []
     case_base_size_before = len(system3.case_base)
-    
+    cb3 = system3.case_base.copy()
+
     for i, test_case in enumerate(test_cases):
-        retrieved, _ = system3.retrieve_most_similar(test_case, use_weights=True)
-        solution = system3.adapt_regression(retrieved, test_case, use_multiple_rules=True)
-        # DO NOT add to case base (learning disabled)
-        new_case = Case(features=test_case.features, solution=solution)
-        # system3.add_case(new_case)  # Commented out
-        predictions3.append(solution)
+        result = system3.run_query(cb3, test_case, tuned=True, adapt_fn=energy_adapt_fn3, learning=False)
+        predictions3.append(result[0])
+        # cb3 does NOT grow — learning=False
         if (i + 1) % 30 == 0:
             print(f"  Processed {i + 1}/{len(test_cases)} cases")
     
-    case_base_size_after_3 = len(system3.case_base)
+    case_base_size_after_3 = len(cb3)
     mae3 = Evaluator.calculate_mae(predictions3, [case.solution for case in test_cases])
     rmse3 = Evaluator.calculate_rmse(predictions3, [case.solution for case in test_cases])
     

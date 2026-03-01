@@ -147,13 +147,15 @@ Metrics: **MAE** and **RMSE**
 
 ## Team Contribution
 
-This project was completed individually by **Arun Munagala**.
+This project was completed equally by:
 
-- Designed and implemented the full CBR system (data loading, similarity, retrieval, adaptation, evaluation)
-- Ran all 6 test conditions and analyzed results
-- Wrote this README and the accompanying PDF report
+- **Arun Munagala**
+- **Niloy Deb Roy Mishu**
+- **Aditya Pise**
 
-I agree that all effort on this assignment was performed by me alone.
+All three members contributed equally to the design and implementation of the CBR system, running and analyzing the 6 test conditions, and writing the README and PDF report.
+
+Each member agrees that the amount of effort contributed by each member was equivalent.
 
 ---
 
